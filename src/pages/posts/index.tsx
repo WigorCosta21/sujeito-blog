@@ -55,14 +55,6 @@ const Posts = ({ posts: postsBlog, page, totalPage }: IPostsProps) => {
     if (response.results.length === 0) return;
 
     const getPosts = response.results.map((post) => {
-      const updatedAt = post.last_publication_date
-        ? new Date(post.last_publication_date).toLocaleDateString("pt-BR", {
-            day: "2-digit",
-            month: "long",
-            year: "numeric",
-          })
-        : "";
-
       return {
         slug: post.uid as string,
         title: RichText.asText(post.data.title),
@@ -71,7 +63,13 @@ const Posts = ({ posts: postsBlog, page, totalPage }: IPostsProps) => {
             (content: { type: string }) => content.type === "paragraph"
           )?.text ?? "",
         cover: post.data.cover.url,
-        updatedAt,
+        updatedAt: new Date(
+          post.last_publication_date as string
+        ).toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        }),
       };
     });
 
@@ -120,10 +118,10 @@ const Posts = ({ posts: postsBlog, page, totalPage }: IPostsProps) => {
             {Number(currentPage) < Number(totalPage) && (
               <div>
                 <button onClick={() => navigatePage(Number(currentPage + 1))}>
-                  <FiChevronsRight size={25} color="#FFF" />
+                  <FiChevronRight size={25} color="#FFF" />
                 </button>
                 <button onClick={() => navigatePage(Number(totalPage))}>
-                  <FiChevronRight size={25} color="#FFF" />
+                  <FiChevronsRight size={25} color="#FFF" />
                 </button>
               </div>
             )}
@@ -149,14 +147,6 @@ export const getStaticProps: GetStaticProps = async () => {
   );
 
   const posts = response.results.map((post) => {
-    const updatedAt = post.last_publication_date
-      ? new Date(post.last_publication_date).toLocaleDateString("pt-BR", {
-          day: "2-digit",
-          month: "long",
-          year: "numeric",
-        })
-      : "";
-
     return {
       slug: post.uid,
       title: RichText.asText(post.data.title),
@@ -165,7 +155,13 @@ export const getStaticProps: GetStaticProps = async () => {
           (content: { type: string }) => content.type === "paragraph"
         )?.text ?? "",
       cover: post.data.cover.url,
-      updatedAt,
+      updatedAt: new Date(
+        post.last_publication_date as string
+      ).toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      }),
     };
   });
   return {
