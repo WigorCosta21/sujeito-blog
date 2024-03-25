@@ -10,7 +10,7 @@ export const Header = () => {
   return (
     <header className={styles.headerContainer}>
       <div className={styles.headerContent}>
-        <a href="#">
+        <a href="/">
           <Image src={logo} alt="Sujeito programador logo" />
         </a>
 
