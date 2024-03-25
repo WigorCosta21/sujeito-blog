@@ -25,10 +25,59 @@ type Post = {
 };
 interface IPostsProps {
   posts: Post[];
+  page: string;
+  totalPage: string;
 }
 
-const Posts = ({ posts: postsBlog }: IPostsProps) => {
+const Posts = ({ posts: postsBlog, page, totalPage }: IPostsProps) => {
+  const [currentPage, setCurrentPage] = useState(Number(page));
   const [posts, setPosts] = useState(postsBlog || []);
+
+  const reqPost = async (pageNumber: number) => {
+    const prismic = getPrismicClient();
+
+    const response = await prismic.query(
+      [Prismic.predicates.at("document.type", "pos")],
+      {
+        orderings: "[document.last_publication_date desc]", //Ordenar pelo mais recente
+        fetch: ["pos.title", "pos.description", "pos.cover"],
+        pageSize: 3,
+        page: String(pageNumber),
+      }
+    );
+
+    return response;
+  };
+
+  const navigatePage = async (pageNumber: number) => {
+    const response = await reqPost(pageNumber);
+
+    if (response.results.length === 0) return;
+
+    const getPosts = response.results.map((post) => {
+      const updatedAt = post.last_publication_date
+        ? new Date(post.last_publication_date).toLocaleDateString("pt-BR", {
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+          })
+        : "";
+
+      return {
+        slug: post.uid as string,
+        title: RichText.asText(post.data.title),
+        description:
+          post.data.description.find(
+            (content: { type: string }) => content.type === "paragraph"
+          )?.text ?? "",
+        cover: post.data.cover.url,
+        updatedAt,
+      };
+    });
+
+    setCurrentPage(pageNumber);
+    setPosts(getPosts);
+  };
 
   return (
     <>
@@ -57,23 +106,27 @@ const Posts = ({ posts: postsBlog }: IPostsProps) => {
           ))}
 
           <div className={styles.buttonNavigate}>
-            <div>
-              <button>
-                <FiChevronsLeft size={25} color="#FFF" />
-              </button>
-              <button>
-                <FiChevronLeft size={25} color="#FFF" />
-              </button>
-            </div>
+            {Number(currentPage) >= 2 && (
+              <div>
+                <button onClick={() => navigatePage(Number(1))}>
+                  <FiChevronsLeft size={25} color="#FFF" />
+                </button>
+                <button onClick={() => navigatePage(Number(currentPage - 1))}>
+                  <FiChevronLeft size={25} color="#FFF" />
+                </button>
+              </div>
+            )}
 
-            <div>
-              <button>
-                <FiChevronsRight size={25} color="#FFF" />
-              </button>
-              <button>
-                <FiChevronRight size={25} color="#FFF" />
-              </button>
-            </div>
+            {Number(currentPage) < Number(totalPage) && (
+              <div>
+                <button onClick={() => navigatePage(Number(currentPage + 1))}>
+                  <FiChevronsRight size={25} color="#FFF" />
+                </button>
+                <button onClick={() => navigatePage(Number(totalPage))}>
+                  <FiChevronRight size={25} color="#FFF" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -118,6 +171,8 @@ export const getStaticProps: GetStaticProps = async () => {
   return {
     props: {
       posts,
+      page: response.page,
+      totalPage: response.total_pages,
     },
     revalidate: 60 * 30,
   };
