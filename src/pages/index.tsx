@@ -2,7 +2,7 @@ import { GetStaticProps } from "next";
 import Head from "next/head";
 import Image from "next/image";
 
-import { getPrismiscClient } from "../services/prismic";
+import { getPrismicClient } from "../services/prismic";
 import Prismic from "@prismicio/client";
 import { RichText } from "prismic-dom";
 
@@ -90,7 +90,7 @@ const Home = ({ content }: IContentProps) => {
 };
 
 export const getStaticProps: GetStaticProps = async () => {
-  const prismic = getPrismiscClient();
+  const prismic = getPrismicClient();
 
   const response = await prismic.query([
     Prismic.Predicates.at("document.type", "home"),

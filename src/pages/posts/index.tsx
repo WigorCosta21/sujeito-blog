@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { GetStaticProps } from "next";
 import Head from "next/head";
 import Link from "next/link";
 import Image from "next/image";
@@ -8,11 +10,26 @@ import {
   FiChevronsRight,
 } from "react-icons/fi";
 
-import thumbImg from "../../../public/images/thumb.png";
+import { getPrismicClient } from "../../services/prismic";
+import Prismic from "@prismicio/client";
+import { RichText } from "prismic-dom";
 
 import styles from "./styles.module.scss";
 
-const Posts = () => {
+type Post = {
+  slug: string;
+  title: string;
+  cover: string;
+  description: string;
+  updatedAt: string;
+};
+interface IPostsProps {
+  posts: Post[];
+}
+
+const Posts = ({ posts: postsBlog }: IPostsProps) => {
+  const [posts, setPosts] = useState(postsBlog || []);
+
   return (
     <>
       <Head>
@@ -20,25 +37,24 @@ const Posts = () => {
       </Head>
       <main className={styles.container}>
         <div className={styles.posts}>
-          <Link legacyBehavior href="/">
-            <a>
-              <Image
-                src={thumbImg}
-                alt="Post título 1"
-                width={720}
-                height={410}
-                quality={100}
-              />
-              <strong>Criando meu primeiro aplicativo</strong>
-              <time>08 FEV 2021</time>
-              <p>
-                Nesse vídeo falamos de como cobrar por um projeto focando mais
-                em pessoas que estão nos primeiros projetos, clientes ou até
-                como freelancer e nele falamos uma das maneiras que podemos
-                fazer esse calculo.
-              </p>
-            </a>
-          </Link>
+          {posts.map((post) => (
+            <Link key={post.slug} legacyBehavior href={`/posts/${post.slug}`}>
+              <a key={post.slug}>
+                <Image
+                  src={post.cover}
+                  alt={post.title}
+                  width={720}
+                  height={410}
+                  quality={100}
+                  placeholder="blur"
+                  blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mN0vQgAAWEBGHsgcxcAAAAASUVORK5CYII="
+                />
+                <strong>{post.title}</strong>
+                <time>{post.updatedAt}</time>
+                <p>{post.description}</p>
+              </a>
+            </Link>
+          ))}
 
           <div className={styles.buttonNavigate}>
             <div>
@@ -66,3 +82,43 @@ const Posts = () => {
 };
 
 export default Posts;
+
+export const getStaticProps: GetStaticProps = async () => {
+  const prismic = getPrismicClient();
+
+  const response = await prismic.query(
+    [Prismic.Predicates.at("document.type", "pos")],
+    {
+      orderings: "[document.last_publication_date desc]", //Ordenar pelo mais recente
+      fetch: ["pos.title", "pos.description", "pos.cover"],
+      pageSize: 3,
+    }
+  );
+
+  const posts = response.results.map((post) => {
+    const updatedAt = post.last_publication_date
+      ? new Date(post.last_publication_date).toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        })
+      : "";
+
+    return {
+      slug: post.uid,
+      title: RichText.asText(post.data.title),
+      description:
+        post.data.description.find(
+          (content: { type: string }) => content.type === "paragraph"
+        )?.text ?? "",
+      cover: post.data.cover.url,
+      updatedAt,
+    };
+  });
+  return {
+    props: {
+      posts,
+    },
+    revalidate: 60 * 30,
+  };
+};
